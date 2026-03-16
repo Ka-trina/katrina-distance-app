@@ -30,7 +30,6 @@ def cached_geocode(query):
     return geolocator.geocode(
         query,
         language="zh-TW",
-        country_codes="tw",
         exactly_one=True
     )
 
@@ -40,7 +39,6 @@ def cached_geocode(query):
 # ---------------------------
 def get_coordinates(place_name):
     try:
-        # 先準備多種可能查詢寫法
         candidates = [
             place_name,
             place_name + ", Taiwan",
@@ -64,7 +62,6 @@ def get_coordinates(place_name):
             simplified_3 + ", 台灣",
         ]
 
-        # 若含「區」，額外嘗試行政區版本
         if "區" in place_name:
             part = place_name.split("區")[0] + "區"
             extra_candidates.extend([
@@ -73,7 +70,6 @@ def get_coordinates(place_name):
                 part + ", 台灣"
             ])
 
-        # 若含「街」，額外嘗試街道版本
         if "街" in place_name:
             part = place_name.split("街")[0] + "街"
             extra_candidates.extend([
@@ -82,7 +78,6 @@ def get_coordinates(place_name):
                 part + ", 台灣"
             ])
 
-        # 若含「路」，額外嘗試道路版本
         if "路" in place_name:
             part = place_name.split("路")[0] + "路"
             extra_candidates.extend([
