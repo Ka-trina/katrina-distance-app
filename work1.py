@@ -19,7 +19,105 @@ if "result" not in st.session_state:
 
 
 # ---------------------------
-# 內建備援座標（優先保證常用地點可查到）
+# 別名對照表
+# 使用者輸入這些名稱時，先轉成標準名稱
+# ---------------------------
+ALIASES = {
+    # 老師範例 / 國外
+    "帝國大廈": "Empire State Building",
+    "empire state building": "Empire State Building",
+    "empirestatebuilding": "Empire State Building",
+
+    # 台北101
+    "台北101": "Taipei 101",
+    "台北 101": "Taipei 101",
+    "taipei101": "Taipei 101",
+    "taipei 101": "Taipei 101",
+    "台北101大樓": "Taipei 101",
+    "taipei 101 tower": "Taipei 101",
+
+    # 台北車站
+    "台北車站": "台北車站",
+    "台北火車站": "台北車站",
+    "台北車站站": "台北車站",
+    "台北火車站站": "台北車站",
+    "北車": "台北車站",
+    "taipei main station": "台北車站",
+    "taipei station": "台北車站",
+    "taipei railway station": "台北車站",
+
+    # 板橋車站
+    "板橋車站": "板橋車站",
+    "板橋火車站": "板橋車站",
+    "板橋站": "板橋車站",
+    "banqiao station": "板橋車站",
+    "banqiao railway station": "板橋車站",
+
+    # 海洋大學
+    "海洋大學": "國立台灣海洋大學",
+    "台灣海洋大學": "國立台灣海洋大學",
+    "國立台灣海洋大學": "國立台灣海洋大學",
+    "國立臺灣海洋大學": "國立台灣海洋大學",
+    "台海大": "國立台灣海洋大學",
+    "海大": "國立台灣海洋大學",
+    "ntou": "國立台灣海洋大學",
+    "national taiwan ocean university": "國立台灣海洋大學",
+
+    # 其他大學
+    "台灣大學": "國立台灣大學",
+    "臺灣大學": "國立台灣大學",
+    "台大": "國立台灣大學",
+    "ntu": "國立台灣大學",
+    "國立台灣大學": "國立台灣大學",
+    "國立臺灣大學": "國立台灣大學",
+
+    "清華大學": "國立清華大學",
+    "清大": "國立清華大學",
+    "nthu": "國立清華大學",
+    "國立清華大學": "國立清華大學",
+
+    "交通大學": "國立陽明交通大學",
+    "陽明交通大學": "國立陽明交通大學",
+    "陽交大": "國立陽明交通大學",
+    "nycu": "國立陽明交通大學",
+    "國立陽明交通大學": "國立陽明交通大學",
+
+    "成功大學": "國立成功大學",
+    "成大": "國立成功大學",
+    "ncku": "國立成功大學",
+    "國立成功大學": "國立成功大學",
+
+    # 車站 / 景點
+    "西門町": "西門町",
+    "ximending": "西門町",
+    "淡水": "淡水站",
+    "淡水站": "淡水站",
+    "tamsui": "淡水站",
+    "tamsui station": "淡水站",
+
+    "台中車站": "台中車站",
+    "台中火車站": "台中車站",
+    "taichung station": "台中車站",
+
+    "高雄車站": "高雄車站",
+    "高雄火車站": "高雄車站",
+    "kaohsiung station": "高雄車站",
+
+    "基隆車站": "基隆車站",
+    "基隆火車站": "基隆車站",
+    "keelung station": "基隆車站",
+
+    # 常見行政 / 地標
+    "總統府": "中華民國總統府",
+    "presidential office building taipei": "中華民國總統府",
+    "中正紀念堂": "國立中正紀念堂",
+    "chiang kai-shek memorial hall": "國立中正紀念堂",
+}
+
+
+# ---------------------------
+# 內建固定座標
+# 這些地點一定穩
 # ---------------------------
 KNOWN_LOCATIONS = {
     "Empire State Building": (
@@ -32,42 +130,96 @@ KNOWN_LOCATIONS = {
         121.564468,
         "Taipei 101, Xinyi District, Taipei City, Taiwan"
     ),
-    "台北101": (
-        25.033968,
-        121.564468,
-        "台北101，台北市信義區，臺灣"
+    "台北車站": (
+        25.047924,
+        121.517081,
+        "台北車站，台北市中正區，臺灣"
     ),
     "板橋車站": (
         25.014231,
         121.463395,
         "板橋車站，新北市板橋區，臺灣"
     ),
-    "Banqiao Station": (
-        25.014231,
-        121.463395,
-        "Banqiao Station, Banqiao District, New Taipei City, Taiwan"
-    ),
-    "台北車站": (
-        25.047924,
-        121.517081,
-        "台北車站，台北市中正區，臺灣"
-    ),
-    "Taipei Main Station": (
-        25.047924,
-        121.517081,
-        "Taipei Main Station, Zhongzheng District, Taipei City, Taiwan"
-    ),
     "國立台灣海洋大學": (
         25.1507663,
         121.7812151,
         "國立臺灣海洋大學，基隆市中正區，臺灣"
     ),
-    "National Taiwan Ocean University": (
-        25.1507663,
-        121.7812151,
-        "National Taiwan Ocean University, Keelung, Taiwan"
+    "國立台灣大學": (
+        25.0173405,
+        121.5397518,
+        "國立臺灣大學，台北市大安區，臺灣"
+    ),
+    "國立清華大學": (
+        24.796498,
+        120.996764,
+        "國立清華大學，新竹市東區，臺灣"
+    ),
+    "國立陽明交通大學": (
+        24.786748,
+        120.997463,
+        "國立陽明交通大學，新竹市東區，臺灣"
+    ),
+    "國立成功大學": (
+        22.996944,
+        120.220474,
+        "國立成功大學，台南市東區，臺灣"
+    ),
+    "西門町": (
+        25.042231,
+        121.507416,
+        "西門町，台北市萬華區，臺灣"
+    ),
+    "淡水站": (
+        25.167817,
+        121.445561,
+        "淡水站，新北市淡水區，臺灣"
+    ),
+    "台中車站": (
+        24.136675,
+        120.684075,
+        "台中車站，台中市中區，臺灣"
+    ),
+    "高雄車站": (
+        22.639673,
+        120.302007,
+        "高雄車站，高雄市三民區，臺灣"
+    ),
+    "基隆車站": (
+        25.134124,
+        121.739526,
+        "基隆車站，基隆市仁愛區，臺灣"
+    ),
+    "中華民國總統府": (
+        25.040085,
+        121.511954,
+        "中華民國總統府，台北市中正區，臺灣"
+    ),
+    "國立中正紀念堂": (
+        25.034535,
+        121.521680,
+        "國立中正紀念堂，台北市中正區，臺灣"
     ),
 }
+
+
+# ---------------------------
+# 文字標準化
+# ---------------------------
+def normalize_place_name(place_name):
+    if place_name is None:
+        return ""
+
+    name = place_name.strip()
+    lower_name = name.lower().strip()
+
+    if name in ALIASES:
+        return ALIASES[name]
+
+    if lower_name in ALIASES:
+        return ALIASES[lower_name]
+
+    return name
 
 
 # ---------------------------
@@ -90,19 +242,21 @@ def cached_geocode(query):
 # Functions
 # ---------------------------
 def get_coordinates(place_name):
-    # 1. 先查內建備援
-    if place_name in KNOWN_LOCATIONS:
-        return KNOWN_LOCATIONS[place_name]
+    normalized_name = normalize_place_name(place_name)
 
-    # 2. 再試多種 geopy 查詢寫法
+    # 1. 先查內建固定座標
+    if normalized_name in KNOWN_LOCATIONS:
+        return KNOWN_LOCATIONS[normalized_name]
+
+    # 2. 再試 geopy
     try:
         candidates = [
-            place_name,
-            place_name + ", Taiwan",
-            place_name + ", 台灣",
+            normalized_name,
+            normalized_name + ", Taiwan",
+            normalized_name + ", 台灣",
         ]
 
-        simplified_1 = place_name.replace("號", "").strip()
+        simplified_1 = normalized_name.replace("號", "").strip()
         simplified_2 = simplified_1.replace("樓", "").strip()
         simplified_3 = simplified_2.replace("巷", "").replace("弄", "").strip()
 
@@ -118,24 +272,24 @@ def get_coordinates(place_name):
             simplified_3 + ", 台灣",
         ]
 
-        if "區" in place_name:
-            part = place_name.split("區")[0] + "區"
+        if "區" in normalized_name:
+            part = normalized_name.split("區")[0] + "區"
             extra_candidates.extend([
                 part,
                 part + ", Taiwan",
                 part + ", 台灣"
             ])
 
-        if "街" in place_name:
-            part = place_name.split("街")[0] + "街"
+        if "街" in normalized_name:
+            part = normalized_name.split("街")[0] + "街"
             extra_candidates.extend([
                 part,
                 part + ", Taiwan",
                 part + ", 台灣"
             ])
 
-        if "路" in place_name:
-            part = place_name.split("路")[0] + "路"
+        if "路" in normalized_name:
+            part = normalized_name.split("路")[0] + "路"
             extra_candidates.extend([
                 part,
                 part + ", Taiwan",
@@ -162,7 +316,7 @@ def get_coordinates(place_name):
 
 
 def great_circle_distance(lat1, lon1, lat2, lon2):
-    r = 6371  # Earth radius in km
+    r = 6371  # 地球半徑（公里）
 
     lat1_rad = math.radians(lat1)
     lon1_rad = math.radians(lon1)
@@ -282,7 +436,7 @@ def show_result(result):
 # Title
 st.title("🌍 地球大圓距離計算")
 st.write("這個程式可以計算地球上兩點之間的大圓距離。")
-st.write("本程式先使用內建常用地點座標備援，再使用 geopy 查詢其他地點。")
+st.write("本程式先使用內建常用地點座標與別名對照，再使用 geopy 查詢其他地點。")
 st.write("若查詢不到完整地址，建議改輸入較簡短的地點名稱，例如車站、學校、景點或建築物名稱。")
 
 st.divider()
