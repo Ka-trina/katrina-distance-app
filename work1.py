@@ -11,7 +11,6 @@ st.set_page_config(
 )
 
 # Session state initialization
-
 if "mode" not in st.session_state:
     st.session_state.mode = None
 
@@ -19,14 +18,94 @@ if "result" not in st.session_state:
     st.session_state.result = None
 
 
+# ---------------------------
+# 地點查詢快取
+# ---------------------------
+@st.cache_data(show_spinner=False)
+def cached_geocode(query):
+    geolocator = Nominatim(
+        user_agent="katrina-distance-app-2026-github-Ka-trina",
+        timeout=10
+    )
+    return geolocator.geocode(
+        query,
+        language="zh-TW",
+        country_codes="tw",
+        exactly_one=True
+    )
+
+
+# ---------------------------
 # Functions
+# ---------------------------
 def get_coordinates(place_name):
     try:
-        geolocator = Nominatim(user_agent="great_circle_distance_homework")
-        location = geolocator.geocode(place_name, timeout=10)
-        if location is None:
-            return None, None, None
-        return location.latitude, location.longitude, location.address
+        # 先準備多種可能查詢寫法
+        candidates = [
+            place_name,
+            place_name + ", Taiwan",
+            place_name + ", 台灣",
+        ]
+
+        # 若輸入是中文地址，額外做一些簡化版本
+        simplified_1 = place_name.replace("號", "").strip()
+        simplified_2 = simplified_1.replace("樓", "").strip()
+        simplified_3 = simplified_2.replace("巷", "").replace("弄", "").strip()
+
+        extra_candidates = [
+            simplified_1,
+            simplified_1 + ", Taiwan",
+            simplified_1 + ", 台灣",
+            simplified_2,
+            simplified_2 + ", Taiwan",
+            simplified_2 + ", 台灣",
+            simplified_3,
+            simplified_3 + ", Taiwan",
+            simplified_3 + ", 台灣",
+        ]
+
+        # 若含「區」，額外嘗試行政區版本
+        if "區" in place_name:
+            part = place_name.split("區")[0] + "區"
+            extra_candidates.extend([
+                part,
+                part + ", Taiwan",
+                part + ", 台灣"
+            ])
+
+        # 若含「街」，額外嘗試街道版本
+        if "街" in place_name:
+            part = place_name.split("街")[0] + "街"
+            extra_candidates.extend([
+                part,
+                part + ", Taiwan",
+                part + ", 台灣"
+            ])
+
+        # 若含「路」，額外嘗試道路版本
+        if "路" in place_name:
+            part = place_name.split("路")[0] + "路"
+            extra_candidates.extend([
+                part,
+                part + ", Taiwan",
+                part + ", 台灣"
+            ])
+
+        candidates.extend(extra_candidates)
+
+        seen = set()
+        for query in candidates:
+            query = query.strip()
+            if not query or query in seen:
+                continue
+            seen.add(query)
+
+            location = cached_geocode(query)
+            if location is not None:
+                return location.latitude, location.longitude, location.address
+
+        return None, None, None
+
     except Exception:
         return None, None, None
 
@@ -85,7 +164,7 @@ def calculate_result(place1, place2):
     if lat1 is None or lat2 is None:
         return {
             "success": False,
-            "message": "找不到其中一個或兩個地點，請嘗試輸入其他名稱。"
+            "message": "找不到其中一個或兩個地點，請嘗試輸入較簡短的名稱，例如車站、學校、景點或建築物名稱。"
         }
 
     distance = great_circle_distance(lat1, lon1, lat2, lon2)
@@ -115,14 +194,14 @@ def show_result(result):
 
     with col1:
         st.subheader("地點一")
-        st.write(f"**輸入地點:** {result['place1']}")
+        st.write(f"**輸入地點：** {result['place1']}")
         st.write(f"**查詢結果：** {result['address1']}")
         st.write(f"**緯度：** {result['lat1']}")
         st.write(f"**經度：** {result['lon1']}")
 
     with col2:
         st.subheader("地點二")
-        st.write(f"**輸入地點:** {result['place2']}")
+        st.write(f"**輸入地點：** {result['place2']}")
         st.write(f"**查詢結果：** {result['address2']}")
         st.write(f"**緯度：** {result['lat2']}")
         st.write(f"**經度：** {result['lon2']}")
@@ -143,19 +222,21 @@ def show_result(result):
         language="python"
     )
 
-    st.write("Where:")
-    st.write("- r = 6371 km (Earth radius)")
-    st.write("- x1, x2 are latitudes in radians")
-    st.write("- y1, y2 are longitudes in radians")
+    st.write("其中：")
+    st.write("- r = 6371 公里（地球半徑）")
+    st.write("- x1、x2 為緯度（弧度制）")
+    st.write("- y1、y2 為經度（弧度制）")
+
 
 # Title
 st.title("🌍 地球大圓距離計算")
-st.write("這個城市可以計算地球上兩點間的大圓距離.")
+st.write("這個程式可以計算地球上兩點之間的大圓距離。")
 st.write("本程式使用 geopy 取得經緯度，並利用大圓距離公式計算兩地距離。")
+st.write("若查詢不到完整地址，建議改輸入較簡短的地點名稱，例如車站、學校、景點或建築物名稱。")
 
 st.divider()
 
-#Teacher example
+# Teacher example
 st.subheader("老師指定範例")
 
 if st.button("執行範例：帝國大廈 → 台北101"):
@@ -176,9 +257,7 @@ if st.button("計算自訂距離"):
 
 st.divider()
 
-# ---------------------------
 # Show result persistently
-# ---------------------------
 if st.session_state.result is not None:
     show_result(st.session_state.result)
 
