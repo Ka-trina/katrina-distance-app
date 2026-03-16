@@ -19,12 +19,64 @@ if "result" not in st.session_state:
 
 
 # ---------------------------
+# 內建備援座標（優先保證常用地點可查到）
+# ---------------------------
+KNOWN_LOCATIONS = {
+    "Empire State Building": (
+        40.748817,
+        -73.985428,
+        "Empire State Building, 20 W 34th St, New York, NY 10001, USA"
+    ),
+    "Taipei 101": (
+        25.033968,
+        121.564468,
+        "Taipei 101, Xinyi District, Taipei City, Taiwan"
+    ),
+    "台北101": (
+        25.033968,
+        121.564468,
+        "台北101，台北市信義區，臺灣"
+    ),
+    "板橋車站": (
+        25.014231,
+        121.463395,
+        "板橋車站，新北市板橋區，臺灣"
+    ),
+    "Banqiao Station": (
+        25.014231,
+        121.463395,
+        "Banqiao Station, Banqiao District, New Taipei City, Taiwan"
+    ),
+    "台北車站": (
+        25.047924,
+        121.517081,
+        "台北車站，台北市中正區，臺灣"
+    ),
+    "Taipei Main Station": (
+        25.047924,
+        121.517081,
+        "Taipei Main Station, Zhongzheng District, Taipei City, Taiwan"
+    ),
+    "國立台灣海洋大學": (
+        25.1507663,
+        121.7812151,
+        "國立臺灣海洋大學，基隆市中正區，臺灣"
+    ),
+    "National Taiwan Ocean University": (
+        25.1507663,
+        121.7812151,
+        "National Taiwan Ocean University, Keelung, Taiwan"
+    ),
+}
+
+
+# ---------------------------
 # 地點查詢快取
 # ---------------------------
 @st.cache_data(show_spinner=False)
 def cached_geocode(query):
     geolocator = Nominatim(
-        user_agent="katrina-distance-app-2026-github-Ka-trina",
+        user_agent="katrina-distance-app/1.0 (student homework contact via github)",
         timeout=10
     )
     return geolocator.geocode(
@@ -38,6 +90,11 @@ def cached_geocode(query):
 # Functions
 # ---------------------------
 def get_coordinates(place_name):
+    # 1. 先查內建備援
+    if place_name in KNOWN_LOCATIONS:
+        return KNOWN_LOCATIONS[place_name]
+
+    # 2. 再試多種 geopy 查詢寫法
     try:
         candidates = [
             place_name,
@@ -45,7 +102,6 @@ def get_coordinates(place_name):
             place_name + ", 台灣",
         ]
 
-        # 若輸入是中文地址，額外做一些簡化版本
         simplified_1 = place_name.replace("號", "").strip()
         simplified_2 = simplified_1.replace("樓", "").strip()
         simplified_3 = simplified_2.replace("巷", "").replace("弄", "").strip()
@@ -226,7 +282,7 @@ def show_result(result):
 # Title
 st.title("🌍 地球大圓距離計算")
 st.write("這個程式可以計算地球上兩點之間的大圓距離。")
-st.write("本程式使用 geopy 取得經緯度，並利用大圓距離公式計算兩地距離。")
+st.write("本程式先使用內建常用地點座標備援，再使用 geopy 查詢其他地點。")
 st.write("若查詢不到完整地址，建議改輸入較簡短的地點名稱，例如車站、學校、景點或建築物名稱。")
 
 st.divider()
